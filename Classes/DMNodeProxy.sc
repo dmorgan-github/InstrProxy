@@ -67,7 +67,7 @@ DMNodeProxy : NodeProxy {
 
     clear {
         this.releaseDependants;
-        this.clearHalo;
+        //this.clearHalo;
         CmdPeriod.remove(cmdperiodfunc);
         vstctrls.clear;
         fxchain.clear;
@@ -94,6 +94,19 @@ DMNodeProxy : NodeProxy {
 
     out_ {|bus=0|
         this.monitor.out = bus;
+    }
+
+    getSpec {
+        ^this.specs;
+    }
+
+    addSpec {|...pairs|
+        if (pairs.notNil) {
+			pairs.pairsDo { |name, spec|
+				if (spec.notNil) { spec = spec.asSpec };
+                this.specs.put(name, spec)
+			}
+		};
     }
 
     fx {|index, fx, cb, wet=1|
@@ -244,14 +257,6 @@ DMNodeProxy : NodeProxy {
 
             }.fork
         }
-    }
-
-    view {|index|
-        ^UiModule('sgui').(this);
-    }
-
-    gui {
-        this.view.front
     }
 
     print {

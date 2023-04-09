@@ -174,6 +174,7 @@ InstrProxy : EventPatternProxy {
     var <synthdef, <pbindproxy;
     var <synthdefmodule, note, <msgFunc;
     var midictrl, keyval;
+    var specs;
 
     *new {
         ^super.new.prInit();
@@ -193,10 +194,12 @@ InstrProxy : EventPatternProxy {
         }
     }
 
+    /*
     +> {|str|
         this.synthdefmodule.modules.clear;
         this.synthdefmodule.parse(str)
     }
+    */
 
     set {|...args|
 
@@ -278,6 +281,7 @@ InstrProxy : EventPatternProxy {
         ^this;
     }
 
+    /*
     synth {|index, component, module, cb|
         if (component.isNil) {
             this.synthdefmodule.removeAt(index);
@@ -286,19 +290,21 @@ InstrProxy : EventPatternProxy {
             this.synthdefmodule[index] = component -> module;
         }
     }
+    */
 
     clear {
-        this.releaseDependants;
-        this.clearHalo;
-        this.node.clear;
-        this.note.clear;
-        this.pbindproxy.clear;
-        if (this.midictrl.notNil) {
-            this.midictrl.disconnect;
-            this.midictrl = nil;
+        this.changed(\clear);
+        node.clear;
+        note.clear;
+        pbindproxy.clear;
+        if (midictrl.notNil) {
+            midictrl.disconnect;
+            midictrl = nil;
         };
         ServerTree.remove(cmdperiodfunc);
+        this.releaseDependants;
         super.clear;
+        
     }
 
     fxchain {
@@ -311,16 +317,6 @@ InstrProxy : EventPatternProxy {
         ^keys.reject({|key|
             except.includes(key)
         })
-    }
-
-    view {|cmds|
-        // TODO: using topenvironment as a sort of cache
-        // but probably can use Halo instead
-        ^UiModule('sgui').envir_(topEnvironment).view(this, nil, cmds);
-    }
-
-    gui {|cmds|
-        this.view(cmds).front
     }
 
     kill {|ids|
@@ -455,59 +451,17 @@ InstrProxy : EventPatternProxy {
         }
     }
 
-    prInit {
+    getSpec {
+        ^specs;
+    }
 
-        var synthfunc, me = this;
-        keyval = "instr%".format(count).asSymbol;
-        if (count > colors.size) {
-            color = Color.rand;
-        }{
-            color = colors.wrapAt(count);
-        };
-        count = count + 1;
-        node = DMNodeProxy().key_("%_out".format(keyval).asSymbol);
-        node.color = color;
-
-        this.clock = W.clock;
-        note = InstrProxyNotePlayer(this);
-        synthdefmodule = SynthDefModule();
-        synthdefmodule.addDependant({|obj, what, vals|
-            var key = me.key;
-            //[obj, what, vals].postln;
-            fork {
-                await {|done|
-                    obj.add(key);
-                    Server.default.sync;
-                    done.value(\ok);
-                };
-                // re-initialize the synth
-                msgFunc = SynthDescLib.global[key].msgFunc;
-                me.instrument = key;
-                me.metadata.putAll(obj.metadata);
-            };
-        });
-
-        nodewatcherfunc = {|obj, what|
-            if ((what == \play) or: (what == \stop)) {
-                isMonitoring = obj.isMonitoring
-            }
-        };
-        node.addDependant(nodewatcherfunc);
-
-        node.play;
-        pbindproxy = PbindProxy();
-        super.source = Pbind();
-
-        cmdperiodfunc = {
-            {
-                node.wakeUp;
-                if (isMonitoring) {
-                    node.play
-                };
-            }.defer(0.5)
-        };
-        ServerTree.add(cmdperiodfunc);
-        ^this
+    addSpec {|...pairs|
+        if (pairs.notNil) {
+			pairs.pairsDo { |name, spec|
+				if (spec.notNil) { spec = spec.asSpec };
+                specs.put(name, spec)
+			}
+		};
     }
 
     prInitSynth {|synthname|
@@ -558,30 +512,65 @@ InstrProxy : EventPatternProxy {
         }
     }
 
-    *initClass {
+    prInit {
 
-        // nice colors;
+        var synthfunc, me = this;
+        keyval = "instr%".format(count).asSymbol;
+        if (count > colors.size) {
+            color = Color.rand;
+        }{
+            color = colors.wrapAt(count);
+        };
+        count = count + 1;
+        node = DMNodeProxy().key_("%_out".format(keyval).asSymbol);
+        node.color = color;
+
+        specs = ();
+        note = InstrProxyNotePlayer(this);
+        /*
+        synthdefmodule = SynthDefModule();
+        synthdefmodule.addDependant({|obj, what, vals|
+            var key = me.key;
+            //[obj, what, vals].postln;
+            fork {
+                await {|done|
+                    obj.add(key);
+                    Server.default.sync;
+                    done.value(\ok);
+                };
+                // re-initialize the synth
+                msgFunc = SynthDescLib.global[key].msgFunc;
+                me.instrument = key;
+                me.metadata.putAll(obj.metadata);
+            };
+        });
+        */
+
+        nodewatcherfunc = {|obj, what|
+            if ((what == \play) or: (what == \stop)) {
+                isMonitoring = obj.isMonitoring
+            }
+        };
+        node.addDependant(nodewatcherfunc);
+
+        node.play;
+        pbindproxy = PbindProxy();
+        super.source = Pbind();
+
+        cmdperiodfunc = {
+            {
+                node.wakeUp;
+                if (isMonitoring) {
+                    node.play
+                };
+            }.defer(0.5)
+        };
+        ServerTree.add(cmdperiodfunc);
+        ^this
+    }
+
+    *initClass {
         colors = List();
-        colors.addAll(
-          [
-              Color(0.80594773292541, 0.4751119852066, 0.32443220615387),
-              Color(0.62813115119934, 0.50460469722748, 0.42918348312378),
-              Color(0.50277349948883, 0.55445058345795, 0.85384097099304),
-              Color(0.60549101829529, 0.63466150760651, 0.86493694782257),
-              Color(0.55233793258667, 0.65434362888336, 0.71119487285614),
-              Color(0.77472245693207, 0.82329275608063, 0.75887560844421),
-              Color(0.67403962612152, 0.74898204803467, 0.83484077453613),
-              Color(0.43814084529877, 0.35949912071228, 0.8521347284317),
-              Color(0.60353236198425, 0.85716576576233, 0.54857833385468),
-              Color(0.84560143947601, 0.71142382621765, 0.53232064247131),
-              Color(0.75822179317474, 0.58384845256805, 0.37344696521759),
-              Color(0.46127707958221, 0.63891048431396, 0.49481935501099),
-              Color(0.7760725736618, 0.79725716114044, 0.52006945610046),
-              Color(0.61446368694305, 0.50829205513, 0.49966106414795),
-              Color(0.74614992141724, 0.8588672876358, 0.77721869945526),
-              Color(0.67358100414276, 0.74493434429169, 0.40996670722961)
-          ].scramble
-        )
     }
 }
 // }}}
