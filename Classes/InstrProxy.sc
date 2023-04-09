@@ -47,7 +47,7 @@ MidiInstrProxy : InstrProxy {
             var r = returnbus+1;
             SoundIn.ar([l, r])
         });
-        this.out = DNodeProxy.defaultout + returnbus;
+        this.out = DMNodeProxy.defaultout + returnbus;
         */
 
         this.set('type', 'midi', 'midicmd', 'noteOn', 'midiout', midiout, 'chan', notechan)
@@ -465,7 +465,7 @@ InstrProxy : EventPatternProxy {
             color = colors.wrapAt(count);
         };
         count = count + 1;
-        node = DNodeProxy().key_("%_out".format(keyval).asSymbol);
+        node = DMNodeProxy().key_("%_out".format(keyval).asSymbol);
         node.color = color;
 
         this.clock = W.clock;
