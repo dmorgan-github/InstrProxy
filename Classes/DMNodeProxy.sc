@@ -65,13 +65,21 @@ DMNodeProxy : NodeProxy {
         this.play(fadeTime:fadeTime)
     }
 
+    view {|index|
+        ^UiModule('instr').(this);
+    }
+
+    gui {
+        this.view.front
+    }
+
     clear {
-        this.releaseDependants;
-        //this.clearHalo;
+        this.changed(\clear);
         CmdPeriod.remove(cmdperiodfunc);
         vstctrls.clear;
         fxchain.clear;
         metadata.clear;
+        this.releaseDependants;
         super.clear;
     }
 
@@ -120,7 +128,7 @@ DMNodeProxy : NodeProxy {
             if (fx.isFunction) {
                 var obj = (name:"func_%".format(UniqueID.next), type:'func');
                 obj['ui'] = {|self|
-                    UiModule('sgui').gui(this, index);
+                    UiModule('instr').gui(this, index);
                 };
                 this.filter(index, fx);
                 this.fxchain.put(index, obj);
@@ -164,7 +172,7 @@ DMNodeProxy : NodeProxy {
                     mod = DMModule(key);
                     obj = (name:fx, type:'func', 'ctrl':mod);
                     obj['ui'] = {|self|
-                        UiModule('sgui').gui(this, index);
+                        UiModule('instr').gui(this, index);
                     };
                     cb.(mod);
                     func = mod.func;

@@ -173,7 +173,7 @@ InstrProxy : EventPatternProxy {
     var <metadata, <controlNames;
     var <synthdef, <pbindproxy;
     var note, <msgFunc;
-    var midictrl, keyval;
+    var midictrl, keyval, <synthdefmodule;
     var specs;
 
     *new {
@@ -191,6 +191,20 @@ InstrProxy : EventPatternProxy {
     @@ {|val, adverb|
         if (adverb.notNil) {
             this.node.setOrPut(adverb, val);
+        }
+    }
+
+    +> {|str|
+        synthdefmodule.modules.clear;
+        synthdefmodule.parse(str)
+    }
+
+    synth {|index, component, module, cb|
+        if (component.isNil) {
+            synthdefmodule.removeAt(index);
+        }{
+            cb.value(this.synthdefmodule);
+            synthdefmodule[index] = component -> module;
         }
     }
 
@@ -334,6 +348,15 @@ InstrProxy : EventPatternProxy {
     key_ {|val|
         keyval = val;
         this.node.key = "%_out".format(keyval).asSymbol;
+    }
+
+    view {|cmds|
+        // TODO: using topenvironment as a sort of cache
+        ^UiModule('instr').envir_(topEnvironment).view(this, nil, cmds);
+    }
+
+    gui {|cmds|
+        this.view(cmds).front
     }
 
     print {
@@ -509,6 +532,23 @@ InstrProxy : EventPatternProxy {
 
         specs = ();
         note = InstrProxyNotePlayer(this);
+        synthdefmodule = SynthDefModule();
+        synthdefmodule.addDependant({|obj, what, vals|
+            var key = me.key;
+            //[obj, what, vals].postln;
+            fork {
+                await {|done|
+                    obj.add(key);
+                    Server.default.sync;
+                    done.value(\ok);
+                };
+                // re-initialize the synth
+                msgFunc = SynthDescLib.global[key].msgFunc;
+                me.instrument = key;
+                me.metadata.putAll(obj.metadata);
+            };
+        });
+
         nodewatcherfunc = {|obj, what|
             if ((what == \play) or: (what == \stop)) {
                 isMonitoring = obj.isMonitoring

@@ -1,34 +1,35 @@
 /*
 Presets
 */
-P {
+DMPreset {
 
     ///////////////////////////////
     // properties
     *addCurrent {|node, num|
-        var key = node.key;
-        var vals = P.getCurrentVals(node);
-        var presets = Halo.at(\presets, key);
-        if (presets.isNil) {
-            presets = Order.new;
-            Halo.put(\presets, key, presets);
-        };
+        var vals = DMPreset.getCurrentVals(node);
+        var presets = DMPreset.getPresets(node);
         presets.put(num, vals);
     }
 
     *getPresets {|node|
         var key = node.key;
-        var presets = Halo.at(\presets, key);
+        var presets = Library.at(node, \presets);
         if (presets.isNil) {
             presets = Order.new;
-            Halo.put(\presets, key, presets);
+            Library.put(node, \presets, presets);
+            node.addDependant({|obj, what|
+                if (what == \clear) {
+                    "clear presets".debug(node.key);
+                    Library.put(this, \presets, nil)
+                }
+            });
         }
         ^presets
     }
 
     *getPreset {|node, num|
         var key = node.key;
-        var presets = P.getPresets(node);
+        var presets = DMPreset.getPresets(node);
         ^presets[num];
     }
 
@@ -50,17 +51,17 @@ P {
     }
 
     *remove {|node, num|
-        var presets = P.getPresets(node);
+        var presets = DMPreset.getPresets(node);
         presets.removeAt(num);
     }
 
     *morph {|node, num, beats=20, wait=0.01|
         var key = node.key;
-        var presets = P.getPresets(node);
+        var presets = DMPreset.getPresets(node);
         Tdef(key).stop.play;
         Tdef(key, {|ev|
             var presets = ev[\presets];
-            var curr = P.getCurrentVals(node);
+            var curr = DMPreset.getCurrentVals(node);
             var target = presets[ev[\preset]];
             var numsteps;
             ev[\dt] ? ev[\dt] ? 0.01;
@@ -78,8 +79,8 @@ P {
     }
 
     *blend{|node, from, to, blend=0|
-        var frompreset = P.getPreset(node, from);
-        var topreset = P.getPreset(node, to);
+        var frompreset = DMPreset.getPreset(node, from);
+        var topreset = DMPreset.getPreset(node, to);
         if (frompreset.notNil and: {topreset.notNil}) {
             var result = frompreset.blend(topreset, blend);
             node.set(*result.getPairs);
@@ -88,9 +89,10 @@ P {
 
     ///////////////////////////////
     // sources
+    /*
     *addCurrentSource {|node, num|
         var key = node.key;
-        var vals = P.getCurrentSource(node);
+        var vals = DMPreset.getCurrentSource(node);
         var sources = Halo.at(\source, key);
         if (sources.isNil) {
             sources = Order.new;
@@ -111,7 +113,7 @@ P {
 
     *getSource {|node, num|
         var key = node.key;
-        var sources = P.getSources(node);
+        var sources = DMPreset.getSources(node);
         ^sources[num];
     }
 
@@ -120,14 +122,15 @@ P {
     }
 
     *removeSource {|node, num|
-        var sources = P.getSources(node);
+        var sources = DMPreset.getSources(node);
         sources.removeAt(num);
     }
 
     *morphSource {|node, num, fadeTime=20|
-        var tosource = P.getSource(node, num);
+        var tosource = DMPreset.getSource(node, num);
         node.fadeTime = fadeTime;
         node.source = tosource;
     }
+    */
 
 }
