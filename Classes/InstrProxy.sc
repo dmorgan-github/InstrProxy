@@ -172,7 +172,7 @@ InstrProxy : EventPatternProxy {
     var <isMonitoring, <nodewatcherfunc;
     var <metadata, <controlNames;
     var <synthdef, <pbindproxy;
-    var <synthdefmodule, note, <msgFunc;
+    var note, <msgFunc;
     var midictrl, keyval;
     var specs;
 
@@ -193,13 +193,6 @@ InstrProxy : EventPatternProxy {
             this.node.setOrPut(adverb, val);
         }
     }
-
-    /*
-    +> {|str|
-        this.synthdefmodule.modules.clear;
-        this.synthdefmodule.parse(str)
-    }
-    */
 
     set {|...args|
 
@@ -281,17 +274,6 @@ InstrProxy : EventPatternProxy {
         ^this;
     }
 
-    /*
-    synth {|index, component, module, cb|
-        if (component.isNil) {
-            this.synthdefmodule.removeAt(index);
-        }{
-            cb.value(this.synthdefmodule);
-            this.synthdefmodule[index] = component -> module;
-        }
-    }
-    */
-
     clear {
         this.changed(\clear);
         node.clear;
@@ -365,7 +347,7 @@ InstrProxy : EventPatternProxy {
             if (obj.type == \vst) { prefix = "vst:" };
             fxname = obj.name.asString.split($.)[0];
             fxname = fxname.select({|val| val.isAlphaNum}).toLower;
-            str = str ++ "~%[%] = 'fx' -> ('".format(this.key, 20 + i) ++ prefix ++ obj.name ++ "': [";
+            str = str ++ "~%.fx(%, '".format(this.key, 20 + i) ++ prefix ++ obj.name ++ "')";
             if (obj.params.notNil) {
                 var names = obj.ctrl.info.parameters;
                 //str = str ++ "~%.fxchain[%].ctrl.set(*[".format(this.key, i);
@@ -379,13 +361,13 @@ InstrProxy : EventPatternProxy {
         });
 
         str = str + "\n";
-        str = str + "(\n~%".format(this.key) + "\n";
+        str = str ++ "(\n~%".format(this.key) + "\n";
         keys.do({|k|
             var v = envir[k];
             var spec = this.getSpec(k);
             var default = if (spec.notNil) {spec.default}{nil};
             if (v != default and: {k != \instrument}) {
-                str = str + ("@." ++ k);
+                str = str ++ ("@." ++ k);
                 str = str + v.asCode + "\n";
             }
         });
@@ -397,11 +379,11 @@ InstrProxy : EventPatternProxy {
             var spec = node.getSpec(k);
             var default = if (spec.notNil) {spec.default}{nil};
             if (v != default and: { [\i_out, \out, \fadeTime].includes(k).not } ) {
-                str = str + ("@." ++ k);
+                str = str ++ ("@." ++ k);
                 str = str + v.asCode + "\n";
             }
         });
-        str = str + ")";
+        str = str ++ ")";
         ^str;
     }
 
@@ -527,25 +509,6 @@ InstrProxy : EventPatternProxy {
 
         specs = ();
         note = InstrProxyNotePlayer(this);
-        /*
-        synthdefmodule = SynthDefModule();
-        synthdefmodule.addDependant({|obj, what, vals|
-            var key = me.key;
-            //[obj, what, vals].postln;
-            fork {
-                await {|done|
-                    obj.add(key);
-                    Server.default.sync;
-                    done.value(\ok);
-                };
-                // re-initialize the synth
-                msgFunc = SynthDescLib.global[key].msgFunc;
-                me.instrument = key;
-                me.metadata.putAll(obj.metadata);
-            };
-        });
-        */
-
         nodewatcherfunc = {|obj, what|
             if ((what == \play) or: (what == \stop)) {
                 isMonitoring = obj.isMonitoring
