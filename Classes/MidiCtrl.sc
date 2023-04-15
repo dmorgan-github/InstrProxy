@@ -6,6 +6,27 @@ MidiCtrl {
         ^super.new.prInit(node);
     }
 
+    note {|noteChan, note, debug=false|
+
+        var key = this.node.key;
+        var noteonkey = "%_noteon".format(key).asSymbol;
+        var noteoffkey = "%_noteoff".format(key).asSymbol;
+
+        if (note.isNil) {
+            note = (0..110);
+        };
+
+        MIDIdef.noteOn(noteonkey.debug("noteonkey"), {|vel, note, chan|
+            this.node.on(note, vel, debug:debug);
+        }, noteNum:note, chan:noteChan)
+        .fix;
+
+        MIDIdef.noteOff(noteoffkey.debug("noteoffkey"), {|vel, note, chan|
+            this.node.off(note);
+        }, noteNum:note, chan:noteChan)
+        .fix;
+    }
+
     // TODO: ccChan bookkeeping
     cc {|props, ccNums, ccChan=0|
 

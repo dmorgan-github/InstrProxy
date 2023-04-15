@@ -38,22 +38,8 @@ DMNodeProxy : NodeProxy {
 
         if (prop.isNil and: val.isKindOf(Array)) {
             this.set(*val);
-        } {
-            if (val.isKindOf(Pattern) ) {
-                var index;
-                if ((index = patterns.indexOf(prop)).isNil) {
-                    patterns.add(prop);
-                    index = patterns.size-1;
-                };
-                // if the property had previously been set
-                // then we have to clear it from the nodemap
-                // otherwise the set from the pattern will be ignored
-                this.set(prop, nil);
-                this.put(300 + index, \set -> Pbind(prop, val))
-
-            }{
-                this.set(prop, val)
-            }
+        } { 
+            this.set(prop, val)
         }
     }
 
@@ -387,7 +373,7 @@ DMNodeProxy : NodeProxy {
         // initialize or re-initialize
         this.filter(1000, {|in|
             Splay.ar(
-                in /* \vol.kr(1, spec:ControlSpec(0, 2, \lin, 0, 1, "vol"))*/,
+                in ,
                 spread: \spread.kr(1),
                 center: \center.kr(0),
                 levelComp: false
@@ -406,13 +392,11 @@ DMNodeProxy : NodeProxy {
 
         CmdPeriod.add(cmdperiodfunc);
 
-        ^this;
-        //^this.deviceInit;
+        ^this; 
     }
 
     *initClass {
         defaultout = 0;//Server.default.options.numInputBusChannels;
     }
-
 }
 

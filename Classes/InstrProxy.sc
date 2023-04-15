@@ -199,6 +199,17 @@ InstrProxy : EventPatternProxy {
         synthdefmodule.parse(str)
     }
 
+    << {|pattern|
+        if (pattern.isArray) {
+            var a;
+            pattern.pairsDo {|k,v|
+                a = a.add(k).add(v);
+            };
+            pattern = Pbind(*a);
+        };
+        this.source = pattern;
+    }
+
     synth {|index, component, module, cb|
         if (component.isNil) {
             synthdefmodule.removeAt(index);
