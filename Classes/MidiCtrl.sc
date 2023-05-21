@@ -41,11 +41,12 @@ MidiCtrl {
             MIDIdef.cc(cckey, {|val, num, chan|
                 var mapped, ctrl, spec, filter;
                 ctrl = order[num];
-                spec = node.getSpec(ctrl);
+                spec = node.getSpec[ctrl];
                 if (spec.isNil) {
                     spec = [0, 1].asSpec;
                 };
                 mapped = spec.map(val/127);
+                //[ctrl, mapped, val, ].postln;
                 node.set(ctrl, mapped);
             }, ccNum:ccNums, chan:ccChan)
             .fix;
@@ -56,7 +57,7 @@ MidiCtrl {
             MIDIClient.destinations.do({|dest, i|
                 order.indices.do({|num|
                     var ctrl = order[num];
-                    var spec = node.getSpec(ctrl);
+                    var spec = node.getSpec[ctrl];
                     var min, max, current, ccval;
                     if (spec.isNil) {
                         spec = [0, 1].asSpec;

@@ -199,6 +199,15 @@ InstrProxy : EventPatternProxy {
         synthdefmodule.parse(str)
     }
 
+    // TODO: this will require more work to be usable
+    >> {|str|
+        var vals = str.split($ );
+        vals.do({|val, i|
+            val = val.stripWhiteSpace;
+            this.fx(20 + i, val.asSymbol);
+        });
+    }
+
     << {|pattern|
         if (pattern.isArray) {
             var a;
@@ -363,11 +372,16 @@ InstrProxy : EventPatternProxy {
 
     view {|cmds|
         // TODO: using topenvironment as a sort of cache
+        if (cmds.isNil) {
+            cmds = "[(meter props) (presets freq fx)]"
+        };
         ^UiModule('instr').envir_(topEnvironment).view(this, nil, cmds);
     }
 
     gui {|cmds|
-        this.view(cmds).front
+        this.view(cmds)
+        //.minSize_(Size(560, 150))
+        .front
     }
 
     print {
@@ -433,7 +447,9 @@ InstrProxy : EventPatternProxy {
                         var args = evt.use({
                             node.msgFunc.valueEnvir;
                         });
-                        //args.postln;
+                        if (evt[\node_set_debug].notNil) {
+                            args.postln;
+                        };
                         if (args.size > 0) {
                             Server.default.bind({
                                 node.set(*args)

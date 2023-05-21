@@ -1,9 +1,9 @@
 (
-	\name: 			"InstrProxy",
+	\name:          "InstrProxy",
 	\version:       "0.0.1",
-	\summary:		"Combined API for maniuplating synths, patterns and fx",
-	\author: 		"David Morgan",
-	\country: 		"USA",
+	\summary:       "Combined API for maniuplating synths, patterns and fx",
+	\author:        "David Morgan",
+	\country:       "USA",
 	\license:       "GPL",
-	\since: 		"2023"
+	\since:         "2023"
 )
