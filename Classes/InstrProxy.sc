@@ -16,8 +16,8 @@ MidiInstrProxy : InstrProxy {
 
     var <notechan=0, <returnbus=0, <midiout;
 
-    *new {|synth|
-        ^super.new().prInitSynth(synth);
+    *new {|device, chan|
+        ^super.new().prInitMidiSynth(device, chan);
     }
 
     source_ {|pattern|
@@ -29,16 +29,20 @@ MidiInstrProxy : InstrProxy {
        super.source = pattern;
     }
 
-    prInitSynth {|argSynth|
+    instrument_ {
+        "Not Implemented".throw
+    }
 
-        var args;// = argSynth.asString.split($:);
+    prInitMidiSynth {|device notechan|
+
+        //var args;// = argSynth.asString.split($:);
 
         // TODO: refactor
-        midiout = MIDIOut.newByName("IAC Driver", "Bus 1");
-        midiout.connect;
+        //midiout = MIDIOut.newByName("IAC Driver", "Bus 1");
+        //midiout.connect;
 
-        args = argSynth.asString.split($,);
-        notechan = args[0].asInteger;
+        //args = argSynth.asString.split($,);
+        //notechan = args[0].asInteger;
         //returnbus = args[1].asInteger;
 
         /*
@@ -50,6 +54,7 @@ MidiInstrProxy : InstrProxy {
         this.out = DMNodeProxy.defaultout + returnbus;
         */
 
+        midiout = MidiCtrl.connect(device);
         this.set('type', 'midi', 'midicmd', 'noteOn', 'midiout', midiout, 'chan', notechan)
     }
 }
@@ -197,15 +202,6 @@ InstrProxy : EventPatternProxy {
     +> {|str|
         synthdefmodule.modules.clear;
         synthdefmodule.parse(str)
-    }
-
-    // TODO: this will require more work to be usable
-    >> {|str|
-        var vals = str.split($ );
-        vals.do({|val, i|
-            val = val.stripWhiteSpace;
-            this.fx(20 + i, val.asSymbol);
-        });
     }
 
     << {|pattern|
@@ -414,7 +410,7 @@ InstrProxy : EventPatternProxy {
             var v = envir[k];
             var spec = this.getSpec(k);
             var default = if (spec.notNil) {spec.default}{nil};
-            if (v != default and: {k != \instrument}) {
+            if (v != default and: {  [\instrument, \bufposreplyid, \buf].includes(k).not }) {
                 str = str ++ ("@." ++ k);
                 str = str + v.asCode + "\n";
             }

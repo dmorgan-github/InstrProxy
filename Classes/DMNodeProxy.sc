@@ -203,13 +203,14 @@ DMNodeProxy : NodeProxy {
                     var filename;
                     var mod;
 
-                    filename = vst.asString.toLower.split($.);
+                    filename = vst.asString.toLower;//.split($.);
                     filename = "vst/" ++ filename;
                     if (DMModule.exists(filename)) {
                         filename.debug("module exists");
                         mod = DMModule(filename);
                         node.filter(index, mod.func);
                     } {
+                        filename.debug("module does not exists");
                         node.filter(index, {|in|
                             if (id.isNil.not) {
                                 VSTPlugin.ar(in, 2, id:id, info:vst.asSymbol);

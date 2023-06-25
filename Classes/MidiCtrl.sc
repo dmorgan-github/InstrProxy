@@ -1,14 +1,59 @@
+/*
+(
+if ( 'MidiCtrl3'.asClass.notNil ) {
+    \here.postln;
+} {
+    \there.postln
+}
+)
+*/
+
 MidiCtrl {
 
+    classvar <devices;
     var <node;
 
     *new {|node|
         ^super.new.prInit(node);
     }
 
-    note {|noteChan, note, debug=false|
+    *connect {|device, cb|
 
-        var key = this.node.key;
+        var dest, src, obj, out;
+        // MIDIClient.list is async
+        fork({
+            await {|done| MIDIClient.list; fork({ 
+                "connect to %".format(device).inform;
+                1.wait; 
+                done.value(\ok) 
+            }) };
+
+            dest = MIDIClient.destinations.detectIndex({|val| val.device.toLower.contains(device.asString) });
+            if (dest.isNil) {
+                "dest not found %".format(device).throw
+            };
+            out = MIDIOut(dest).connect;
+
+            src = MIDIClient.sources.detectIndex({|val| val.device.toLower.contains(device.asString) });
+            if (src.isNil) {
+                "src not found %".format(device).throw
+            };
+            MIDIIn.connect(src, MIDIClient.sources[src]);
+
+            obj = (src: MIDIClient.sources[src], dest: MIDIClient.destinations[dest], out:out);
+            devices.put(device.asSymbol, obj);
+            cb.(obj);
+        })
+    }
+
+    note {|device, noteChan, note, debug=false|
+        var key = node.key;
+        MidiCtrl.note(key, device, node, noteChan, note, debug);
+    }
+
+    *note {|key, device, node, noteChan, note, debug=false|
+
+        var func, obj;
         var noteonkey = "%_noteon".format(key).asSymbol;
         var noteoffkey = "%_noteoff".format(key).asSymbol;
 
@@ -16,45 +61,68 @@ MidiCtrl {
             note = (0..110);
         };
 
-        MIDIdef.noteOn(noteonkey.debug("noteonkey"), {|vel, note, chan|
-            this.node.on(note, vel, debug:debug);
-        }, noteNum:note, chan:noteChan)
-        .fix;
+        func = {|obj|
 
-        MIDIdef.noteOff(noteoffkey.debug("noteoffkey"), {|vel, note, chan|
-            this.node.off(note);
-        }, noteNum:note, chan:noteChan)
-        .fix;
+            var srcId;
+            srcId = obj['src'].uid.debug("src uid");
+
+            MIDIdef.noteOn(noteonkey.debug("noteonkey"), {|vel, note, chan|
+                this.node.on(note, vel, debug:debug);
+            }, noteNum:note, chan:noteChan, srcID: srcId)
+            .fix;
+
+            MIDIdef.noteOff(noteoffkey.debug("noteoffkey"), {|vel, note, chan|
+                this.node.off(note);
+            }, noteNum:note, chan:noteChan, srcID: srcId)
+            .fix;
+        };
+
+        obj = MidiCtrl.devices.at(device.asSymbol).debug("device");
+        if (obj.isNil) {
+            MidiCtrl.connect(device, cb:{|val| func.(obj)  });
+        } {
+            func.(obj)
+        }
     }
 
-    // TODO: ccChan bookkeeping
-    cc {|props, ccNums, ccChan=0|
+    cc {|device, pairs, ccChan=0|
+        var key = node.key;
+        MidiCtrl.cc(key, device, node, pairs, ccChan);
+    }
 
-        var key = this.node.key;
-        var cckey = "%_cc_%".format(key, ccChan).asSymbol.debug("mididef");
+    *cc {|key, device, node, pairs, ccChan=0|
 
-        if (props.isNil) {
+        var cckey = "%_cc_%_%".format(key, ccChan, device).asSymbol.debug("mididef");
+
+        if (pairs.isNil) {
             cckey.debug("disconnect");
             MIDIdef.cc(cckey).permanent_(false).free;
         }{
-            var order = Order.newFromIndices(props.asArray, ccNums.asArray);
-            MIDIdef.cc(cckey, {|val, num, chan|
-                var mapped, ctrl, spec, filter;
-                ctrl = order[num];
-                spec = node.getSpec[ctrl];
-                if (spec.isNil) {
-                    spec = [0, 1].asSpec;
-                };
-                mapped = spec.map(val/127);
-                //[ctrl, mapped, val, ].postln;
-                node.set(ctrl, mapped);
-            }, ccNum:ccNums, chan:ccChan)
-            .fix;
+            var props, ccNums;
+            var order, func, obj;
 
-            // initialize midi cc value
-            // not sure how to find the correct midiout
-            // so trying all of them
-            MIDIClient.destinations.do({|dest, i|
+            props = pairs.select({|a, i| i.even});
+            ccNums = pairs.select({|a, i| i.odd});
+
+            func = {|order, obj|
+
+                var srcId, out;
+                srcId = obj['src'].uid.debug("src uid");
+                out = obj['out'].debug("out");
+
+                MIDIdef.cc(cckey, {|val, num, chan|
+                    var mapped, ctrl, spec, filter;
+                    ctrl = order[num];
+                    spec = node.getSpec[ctrl];
+                    if (spec.isNil) {
+                        spec = [0, 1].asSpec;
+                    };
+                    mapped = spec.map(val/127);
+                    //[ctrl, mapped, val, ].postln;
+                    node.set(ctrl, mapped);
+                }, ccNum:ccNums, chan:ccChan, srcID:srcId)
+                .fix;
+
                 order.indices.do({|num|
                     var ctrl = order[num];
                     var spec = node.getSpec[ctrl];
@@ -62,6 +130,7 @@ MidiCtrl {
                     if (spec.isNil) {
                         spec = [0, 1].asSpec;
                     };
+
                     min = spec.minval;
                     max = spec.maxval;
                     current = node.get(ctrl);
@@ -74,13 +143,21 @@ MidiCtrl {
                         };
                         //[node.key, \curent, current, \cc, ccval].debug(ctrl);
                         try {
-                            MIDIOut(i).control(ccChan, num, ccval);
+                            out.control(ccChan, num, ccval);
                         } {|err|
                             "midi out: %".format(err).warn;
                         }
                     }
                 });
-            })
+            };
+
+            order = Order.newFromIndices(props.asArray, ccNums.asArray);
+            obj = MidiCtrl.devices.at(device.asSymbol).debug("device");
+            if (obj.isNil) {
+                MidiCtrl.connect(device, cb:{|val| func.(order, val)  });
+            } {
+                func.(order, obj)
+            }
         }
     }
 
@@ -98,7 +175,9 @@ MidiCtrl {
     }
 
     *initClass {
+        devices = Dictionary();
         MIDIClient.init(verbose:true);
     }
 }
+
 

@@ -336,7 +336,7 @@ SynthDefModule : DMModule {
             vel = \vel.kr(1, spec:ControlSpec(0, 1, \lin, 0, 1));
             // default modules
             freq = DMModule('pitch/freq');
-            env = DMModule('env/asr');
+            env = DMModule('env/adsr');
             out = DMModule('out/splay');
 
             me.modules.do({|val, index|
@@ -372,7 +372,7 @@ SynthDefModule : DMModule {
 
             // combine the signals
             sig = sigs.inject(Silent.ar, {|a, b| 
-                a + b.setAll(currentEnvir).(freq, gate);
+                a + b.setAll(currentEnvir).(freq, gate, env);
             });
             //sig = LeakDC.ar(sig);
 

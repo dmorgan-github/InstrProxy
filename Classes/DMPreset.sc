@@ -42,8 +42,9 @@ DMPreset {
         };
 
         vals = vals
-        .select({|key| 
-            node.get(key).isNumber or: {node.get(key).isArray}
+        .select({|key|
+            var val = node.get(key);
+            val.isNumber or: { val.isArray.and({val.size > 0}).and({val[0].isNumber}) }
         })
         .collect({|key| [key, node.get(key)] });
 
